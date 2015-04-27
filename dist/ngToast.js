@@ -1,5 +1,5 @@
 /*!
- * ngToast v1.5.0 (http://tameraydin.github.io/ngToast)
+ * ngToast v1.6.0 (http://tameraydin.github.io/ngToast)
  * Copyright 2015 Tamer Aydin (http://tamerayd.in)
  * Licensed under MIT (http://tameraydin.mit-license.org/)
  */
@@ -140,6 +140,7 @@
         return {
           replace: true,
           transclude: true,
+          priority: 400,
           restrict: 'EA',
           scope: {
             message: '='
@@ -149,18 +150,7 @@
               ngToast.dismiss($scope.message.id);
             };
           }],
-          template:
-            '<li class="ng-toast__message {{message.additionalClasses}}">' +
-              '<div class="alert alert-{{message.className}}" ' +
-                'ng-class="{\'alert-dismissible\': message.dismissButton}">' +
-                '<button type="button" class="close" ' +
-                  'ng-if="message.dismissButton" ' +
-                  'ng-bind-html="message.dismissButtonHtml" ' +
-                  'ng-click="!message.dismissOnClick && dismiss()">' +
-                '</button>' +
-                '<span ng-if="!message.compileContent" ng-transclude></span>' +
-              '</div>' +
-            '</li>',
+          template: _getDefaultTemplate(),
           link: function(scope, element, attrs, ctrl, transclude) {
             if (scope.message.compileContent) {
               var transcludedEl;
@@ -185,6 +175,25 @@
             }
 
             if (scope.message.dismissOnClick) {
+              _bindDismissActionTo(element);
+            }
+
+            if(!scope.message.dismissOnClick && scope.message.dismissButton && scope.message.$$controller) {
+              if(scope.message.$$promise) {
+                return scope.message.$$promise.then(function() {
+                  $timeout(function() {
+                    _bindDismissActionTo(element.find('button').eq(0));
+                  }, 0);
+                });
+              }
+
+              $timeout(function() {
+                _bindDismissActionTo(element.find('button').eq(0));
+              }, 0);
+            }
+
+            ////
+            function _bindDismissActionTo(element) {
               element.bind('click', function() {
                 ngToast.dismiss(scope.message.id);
                 scope.$apply();
@@ -193,7 +202,83 @@
           }
         };
       }
-    ]);
+    ])
+    .directive('toastMessage', ['$timeout', '$compile', '$controller', '$log', '$templateRequest',
+      function($timeout, $compile, $controller, $log, $templateRequest) {
+        return {
+          restrict: 'EA',
+          priority: -400,
+          link: function (scope, $element) {
+            if(!scope.message.template && scope.message.templateUrl) {
+              scope.message.template = scope.message.$$promise = $templateRequest(scope.message.templateUrl);
+            }
+
+            if(scope.message.template && !scope.message.controller) {
+              return $log.error('[ngToast] Controller is required is you want to use a custom template');
+            }
+
+            if(!scope.message.template && scope.message.controller) {
+              return $log.error('[ngToast] Template is required is you want to associating a controller with a toast');
+            }
+
+            if(!scope.message.template && !scope.message.controller) {
+              return;
+            }
+
+            if(scope.message.compileContent) {
+              return $log.error('[ngToast] `compileContent` option is incompatible with `controller`. Consider removing it.');
+            }
+
+            scope.message.$$controller = true;
+            var template = scope.message.template;
+            if(scope.message.$$promise) {
+              scope.message.$$promise.then(function(_template) {
+                template = _template;
+                _fillDirective();
+              });
+            } else {
+              _fillDirective();
+            }
+
+
+            ////
+            function _fillDirective()
+            {
+              $element.html(_getDefaultTemplate(template));
+              var locals = {};
+              var link = $compile($element.contents());
+
+              locals.$scope = scope;
+              locals.$element = $element;
+              var controller = $controller(scope.message.controller, locals);
+
+              if (scope.message.controllerAs) {
+                scope[scope.message.controllerAs] = controller;
+              }
+
+              link(scope);
+            }
+          }
+        };
+      }
+    ])
+  ;
+
+  function _getDefaultTemplate(customContent)
+  {
+    return ''+
+      '<li class="ng-toast__message {{message.additionalClasses}}">' +
+        '<div class="alert alert-{{message.className}}" ' +
+          'ng-class="{\'alert-dismissible\': message.dismissButton}">' +
+          '<button type="button" class="close" ' +
+            'ng-if="message.dismissButton" ' +
+            'ng-bind-html="message.dismissButtonHtml" ' +
+            'ng-click="!message.dismissOnClick && dismiss()">' +
+          '</button>' +
+          (customContent || '<span ng-if="!message.compileContent" ng-transclude></span>') +
+        '</div>' +
+      '</li>';
+  }
 
 })(window, window.angular);
 

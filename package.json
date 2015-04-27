@@ -1,11 +1,11 @@
 {
   "name": "ngToast",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Angular provider for toast notifications",
   "main": "dist/ngToast.js",
   "repository": {
     "type": "git",
-    "url": "git://github.com/tameraydin/ngToast.git"
+    "url": "git://github.com/flienteen/ngToast.git"
   },
   "keywords": [
     "angular",
@@ -29,7 +29,7 @@
   "readmeFilename": "readme.md",
   "homepage": "http://tameraydin.github.io/ngToast",
   "bugs": {
-    "url": "https://github.com/tameraydin/ngToast/issues"
+    "url": "https://github.com/flienteen/ngToast/issues"
   },
   "devDependencies": {
     "caniuse-db": "latest",
